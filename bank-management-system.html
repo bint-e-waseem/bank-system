@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyBank — Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#e9dfc4;
+    --paper-card:#fbf7ec;
+    --ink:#1a2e2b;
+    --ink-soft:#3f544f;
+    --emerald:#0f4c3a;
+    --emerald-dark:#0a3226;
+    --emerald-deep:#062019;
+    --brass:#a67c27;
+    --brass-light:#c9a227;
+    --maroon:#7a2e2e;
+    --line: rgba(15,76,58,0.18);
+    --font-display:'Spectral', Georgia, serif;
+    --font-body:'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono:'IBM Plex Mono','Courier New', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:var(--paper);
+    background-image:
+      repeating-linear-gradient(180deg, rgba(15,76,58,0.05) 0px, rgba(15,76,58,0.05) 1px, transparent 1px, transparent 34px);
+    min-height:100vh;
+  }
+  ::selection{ background:var(--brass-light); color:var(--emerald-deep); }
+
+  /* ---------- LOGIN ---------- */
+  #login-screen{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.05), transparent 40%),
+      linear-gradient(160deg, var(--emerald-dark), var(--emerald-deep) 70%);
+    padding:24px;
+  }
+  .passbook{
+    width:100%; max-width:400px;
+    background:var(--paper-card);
+    border:1px solid var(--brass);
+    border-radius:2px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.45), 0 0 0 6px rgba(166,124,39,0.08);
+    padding:40px 36px 32px;
+    position:relative;
+  }
+  .passbook::before{
+    content:"";
+    position:absolute; inset:10px;
+    border:1px solid rgba(166,124,39,0.35);
+    pointer-events:none;
+  }
+  .passbook-eyebrow{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--brass); text-align:center; margin-bottom:6px;
+  }
+  .passbook h1{
+    font-family:var(--font-display); font-size:34px; font-weight:600;
+    text-align:center; margin:0 0 4px; color:var(--emerald-deep);
+  }
+  .passbook p.sub{
+    text-align:center; color:var(--ink-soft); font-size:13px; margin:0 0 28px;
+  }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-soft); margin-bottom:6px; font-weight:600;
+  }
+  .field input, .field select, .field textarea{
+    width:100%; padding:11px 12px; font-family:var(--font-body); font-size:14px;
+    border:1px solid rgba(26,46,43,0.25); background:#fff; border-radius:3px; color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass);
+  }
+  .btn{
+    font-family:var(--font-body); font-weight:600; font-size:13.5px;
+    border:none; border-radius:3px; padding:11px 18px; cursor:pointer;
+    letter-spacing:.02em; transition:transform .08s ease, box-shadow .15s ease;
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{ background:var(--emerald); color:#fff; width:100%; }
+  .btn-primary:hover{ background:var(--emerald-dark); }
+  .btn-brass{ background:var(--brass); color:#fff; }
+  .btn-brass:hover{ background:var(--brass-light); }
+  .btn-outline{ background:transparent; border:1px solid var(--emerald); color:var(--emerald); }
+  .btn-outline:hover{ background:rgba(15,76,58,0.08); }
+  .btn-danger{ background:var(--maroon); color:#fff; }
+  .btn-danger:hover{ opacity:.9; }
+  .btn-ghost{ background:transparent; color:var(--ink-soft); border:1px solid var(--line); }
+  .btn-sm{ padding:7px 12px; font-size:12.5px; }
+  .hint{ text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:18px; font-family:var(--font-mono); }
+  .login-error{
+    color:var(--maroon); font-size:12.5px; text-align:center; margin:-8px 0 16px;
+    font-weight:600; min-height:16px;
+  }
+  .shake{ animation:shake .35s; }
+  @keyframes shake{
+    10%,90%{transform:translateX(-2px);} 20%,80%{transform:translateX(4px);}
+    30%,50%,70%{transform:translateX(-6px);} 40%,60%{transform:translateX(6px);}
+  }
+
+  /* ---------- APP SHELL ---------- */
+  #app{ display:none; min-height:100vh; }
+  #app.active{ display:flex; }
+  .sidebar{
+    width:230px; flex:0 0 230px;
+    background: linear-gradient(180deg, var(--emerald-dark), var(--emerald-deep));
+    color:#eee7cf; padding:26px 0; display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh;
+  }
+  .brand{ padding:0 22px 22px; border-bottom:1px solid rgba(255,255,255,0.12); margin-bottom:16px;}
+  .brand .mark{ font-family:var(--font-display); font-size:24px; font-weight:700; color:#fff; }
+  .brand .tag{ font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; color:var(--brass-light); text-transform:uppercase; margin-top:2px;}
+  nav.tabs{ display:flex; flex-direction:column; gap:2px; padding:0 12px; flex:1; }
+  nav.tabs button{
+    text-align:left; background:transparent; border:none; color:#d9d2b8;
+    font-family:var(--font-body); font-size:14px; padding:12px 14px; border-radius:4px;
+    cursor:pointer; display:flex; align-items:center; gap:10px; font-weight:500;
+    border-left:3px solid transparent;
+  }
+  nav.tabs button .num{ font-family:var(--font-mono); font-size:11px; color:var(--brass-light); width:16px; }
+  nav.tabs button:hover{ background:rgba(255,255,255,0.06); }
+  nav.tabs button.active{ background:rgba(201,162,39,0.16); border-left-color:var(--brass-light); color:#fff; }
+  .sidebar-footer{ padding:16px 22px 0; border-top:1px solid rgba(255,255,255,0.12); margin-top:14px; }
+  .sidebar-footer button{ width:100%; }
+
+  main{ flex:1; padding:34px 40px 60px; max-width:1100px; }
+  .page-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:26px; flex-wrap:wrap; gap:10px;}
+  .page-head h2{ font-family:var(--font-display); font-size:28px; margin:0; color:var(--emerald-deep); }
+  .page-head .desc{ color:var(--ink-soft); font-size:13.5px; margin-top:4px; }
+
+  .card{
+    background:var(--paper-card); border:1px solid var(--line);
+    border-top:3px solid var(--brass); border-radius:3px;
+    padding:22px 24px; margin-bottom:18px;
+    box-shadow:0 2px 6px rgba(15,76,58,0.06);
+  }
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-bottom:24px;}
+  .stat{ background:var(--paper-card); border:1px solid var(--line); border-left:4px solid var(--emerald); padding:18px 20px; border-radius:3px; }
+  .stat .label{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); font-weight:600; }
+  .stat .value{ font-family:var(--font-mono); font-size:26px; font-weight:600; color:var(--emerald-deep); margin-top:6px; }
+
+  .list-item{
+    display:flex; justify-content:space-between; align-items:center; gap:14px;
+    padding:14px 4px; border-bottom:1px dashed rgba(26,46,43,0.22);
+  }
+  .list-item:last-child{ border-bottom:none; }
+  .li-main .title{ font-weight:600; font-size:14.5px; }
+  .li-main .sub{ font-size:12.5px; color:var(--ink-soft); font-family:var(--font-mono); margin-top:2px;}
+  .badge{ font-size:10.5px; font-family:var(--font-mono); padding:3px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:.05em; font-weight:600;}
+  .badge.active{ background:rgba(15,76,58,0.12); color:var(--emerald); }
+  .badge.inactive{ background:rgba(122,46,46,0.12); color:var(--maroon); }
+  .badge.type{ background:rgba(166,124,39,0.15); color:var(--brass); margin-left:6px;}
+  .empty{ text-align:center; padding:40px 20px; color:var(--ink-soft); }
+  .empty .big{ font-family:var(--font-display); font-size:19px; color:var(--emerald-deep); margin-bottom:6px; }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:560px){ .grid2{ grid-template-columns:1fr; } }
+
+  .toolbar{ display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+
+  /* modal */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(6,32,25,0.55); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-overlay.active{ display:flex; }
+  .modal{
+    background:var(--paper-card); width:100%; max-width:460px; border-radius:4px;
+    border-top:4px solid var(--brass); padding:28px 28px 24px; max-height:88vh; overflow:auto;
+    box-shadow:0 30px 60px rgba(0,0,0,0.4);
+  }
+  .modal h3{ font-family:var(--font-display); font-size:21px; margin:0 0 4px; color:var(--emerald-deep); }
+  .modal .modal-sub{ font-size:12.5px; color:var(--ink-soft); margin-bottom:18px; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  .error-text{ color:var(--maroon); font-size:12.5px; margin-top:-8px; margin-bottom:12px; font-weight:600; min-height:14px; }
+  .radio-row{ display:flex; gap:10px; margin-bottom:16px; }
+  .radio-card{
+    flex:1; border:1px solid var(--line); border-radius:3px; padding:12px; cursor:pointer;
+    text-align:center; font-size:13px; font-weight:600; color:var(--ink-soft);
+  }
+  .radio-card.selected{ border-color:var(--emerald); background:rgba(15,76,58,0.07); color:var(--emerald); }
+
+  /* stamp */
+  #stamp-layer{ position:fixed; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; z-index:200; }
+  .stamp{
+    font-family:var(--font-display); font-weight:700; font-size:26px; letter-spacing:.08em;
+    border:5px solid var(--maroon); color:var(--maroon); border-radius:10px;
+    padding:14px 30px; text-transform:uppercase; transform:rotate(-8deg) scale(2.2); opacity:0;
+    background:rgba(255,255,255,0.55);
+  }
+  .stamp.ok{ border-color:var(--emerald); color:var(--emerald); }
+  .stamp.show{ animation:stampdown .9s ease-out forwards; }
+  @keyframes stampdown{
+    0%{ transform:rotate(-8deg) scale(2.4); opacity:0; }
+    35%{ transform:rotate(-8deg) scale(0.94); opacity:1; }
+    45%{ transform:rotate(-8deg) scale(1.04); opacity:1; }
+    55%{ transform:rotate(-8deg) scale(1); opacity:1; }
+    80%{ transform:rotate(-8deg) scale(1); opacity:1; }
+    100%{ transform:rotate(-8deg) scale(1); opacity:0; }
+  }
+
+  .txn{ font-family:var(--font-mono); font-size:12.5px; padding:10px 0; border-bottom:1px dashed rgba(26,46,43,0.2); display:flex; justify-content:space-between; }
+  .txn:last-child{ border-bottom:none; }
+  .txn .amt.dep{ color:var(--emerald); } .txn .amt.wd{ color:var(--maroon); }
+
+  .brand-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:16px; }
+  .brand-card{ border:1px solid var(--line); border-radius:3px; padding:12px; cursor:pointer; text-align:center; }
+  .brand-card.selected{ border-color:var(--brass); background:rgba(166,124,39,0.1); }
+  .brand-card .name{ font-weight:600; font-size:13px; }
+  .brand-card .pct{ font-family:var(--font-mono); font-size:16px; color:var(--brass); margin-top:4px; }
+
+  h4.section-sub{ font-family:var(--font-display); font-size:16px; color:var(--emerald-deep); margin:0 0 10px; }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login-screen">
+  <div class="passbook" id="passbook-card">
+    <div class="passbook-eyebrow">National Ledger Office</div>
+    <h1>MyBank</h1>
+    <p class="sub">Passbook Access</p>
+    <div class="field">
+      <label>Username</label>
+      <input id="login-user" type="text" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="login-pass" type="password" autocomplete="current-password">
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-primary" onclick="attemptLogin()">Open Passbook</button>
+    <div class="hint">hint — admin / admin123</div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">MyBank</div>
+      <div class="tag">Ledger Terminal</div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="dashboard" class="active"><span class="num">01</span>Dashboard</button>
+      <button data-tab="customers"><span class="num">02</span>Customers</button>
+      <button data-tab="accounts"><span class="num">03</span>Accounts</button>
+      <button data-tab="giving"><span class="num">04</span>Donations &amp; Shopping</button>
+      <button data-tab="reports"><span class="num">05</span>Reports</button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="color:#eee7cf;border-color:rgba(255,255,255,0.25);">Log out</button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="view-dashboard">
+      <div class="page-head">
+        <div><h2>Dashboard</h2><div class="desc">Live standing of the bank, at a glance.</div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="label">Total Customers</div><div class="value" id="stat-customers">0</div></div>
+        <div class="stat"><div class="label">Total Accounts</div><div class="value" id="stat-accounts">0</div></div>
+        <div class="stat"><div class="label">Total Bank Balance</div><div class="value" id="stat-balance">$0.00</div></div>
+      </div>
+      <div class="card">
+        <h4 class="section-sub">Recent Activity</h4>
+        <div id="recent-activity"><div class="empty">No transactions yet — deposits and withdrawals will appear here.</div></div>
+      </div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section id="view-customers" style="display:none;">
+      <div class="page-head">
+        <div><h2>Customers</h2><div class="desc">People holding accounts at this bank.</div></div>
+        <button class="btn btn-brass" onclick="openModal('addCustomer')">+ Add Customer</button>
+      </div>
+      <div class="card" id="customers-list"></div>
+    </section>
+
+    <!-- ACCOUNTS -->
+    <section id="view-accounts" style="display:none;">
+      <div class="page-head">
+        <div><h2>Accounts</h2><div class="desc">Savings &amp; current accounts on the ledger.</div></div>
+        <div class="row">
+          <button class="btn btn-outline" onclick="openModal('transfer')">Transfer Money</button>
+          <button class="btn btn-brass" onclick="openModal('createAccount')">+ Create Account</button>
+        </div>
+      </div>
+      <div class="card" id="accounts-list"></div>
+    </section>
+
+    <!-- GIVING -->
+    <section id="view-giving" style="display:none;">
+      <div class="page-head">
+        <div><h2>Donations &amp; Shopping</h2><div class="desc">Zakat, Sadqa, Fitrana, and partner-brand discounts.</div></div>
+      </div>
+      <div class="card">
+        <h4 class="section-sub">Select an account</h4>
+        <div class="field" style="max-width:320px;">
+          <select id="giving-account-select" onchange="renderGivingBalance()"></select>
+        </div>
+        <div id="giving-balance-line" class="li-main sub" style="font-family:var(--font-mono);"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h4 class="section-sub">Charity</h4>
+          <div class="field">
+            <label>Type</label>
+            <select id="donation-type" onchange="renderDonationFields()">
+              <option value="zakat">Zakat (2.5% of balance)</option>
+              <option value="sadqa">Sadqa (fixed amount)</option>
+              <option value="fitrana">Fitrana (per person)</option>
+            </select>
+          </div>
+          <div id="donation-fields"></div>
+          <div class="error-text" id="donation-error"></div>
+          <button class="btn btn-primary" onclick="submitDonation()">Process Donation</button>
+        </div>
+
+        <div class="card">
+          <h4 class="section-sub">Shopping Schemes</h4>
+          <div class="brand-grid" id="brand-grid"></div>
+          <div class="field">
+            <label>Shopping Amount ($)</label>
+            <input type="number" id="shopping-amount" min="0" step="0.01" oninput="renderShoppingPreview()">
+          </div>
+          <div class="li-main sub" style="font-family:var(--font-mono);" id="shopping-preview"></div>
+          <div class="error-text" id="shopping-error"></div>
+          <button class="btn btn-primary" onclick="submitShopping()" style="margin-top:10px;">Complete Purchase</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="view-reports" style="display:none;">
+      <div class="page-head">
+        <div><h2>Bank Report</h2><div class="desc">Full standing, generated on demand.</div></div>
+      </div>
+      <div class="card" id="report-card"></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-body"></div>
+</div>
+<div id="stamp-layer"></div>
+
+<script>
+/* =========================================================
+   DATA MODEL — mirrors Account / SavingsAccount / CurrentAccount /
+   Customer / Bank from the original C++ program.
+   ========================================================= */
+const SCHEMES = [
+  {name:"Khaadi", pct:0.15},
+  {name:"Sana Safinaz", pct:0.10},
+  {name:"Gul Ahmed", pct:0.0, note:"Buy 2 Get 1 Free"},
+  {name:"Sapphire", pct:0.20},
+  {name:"Bonanza", pct:0.25},
+  {name:"Junaid Jamshed", pct:0.30},
+];
+
+const bank = {
+  name: "MyBank",
+  lastCustomerId: 100,
+  lastAccountNumber: 1000,
+  customers: [], // {id,name,address,phone,email,accountNumbers:[],active}
+  accounts: [],  // {number,holderName,type('Savings'|'Current'),balance,active,transactions:[],rate,minBalance,overdraft}
+};
+
+function fmt(n){ return "$" + Number(n).toFixed(2); }
+function nowLabel(){ return new Date().toLocaleString(); }
+
+function findCustomer(id){ return bank.customers.find(c => c.id === id) || null; }
+function findAccount(num){ return bank.accounts.find(a => a.number === num) || null; }
+
+function addTxn(acc, type, amount, note){
+  acc.transactions.push({type, amount, note: note||"", when: nowLabel()});
+}
+
+function deposit(acc, amount){
+  if(!acc.active) return {ok:false, msg:"Account is inactive."};
+  if(!(amount > 0)) return {ok:false, msg:"Deposit amount must be positive."};
+  acc.balance += amount;
+  addTxn(acc, "DEPOSIT", amount);
+  return {ok:true};
+}
+
+function baseWithdraw(acc, amount){
+  if(!(amount > 0)) return {ok:false, msg:"Withdrawal amount must be positive."};
+  if(!acc.active) return {ok:false, msg:"Account is inactive."};
+  if(amount > acc.balance) return {ok:false, msg:"Insufficient balance."};
+  acc.balance -= amount;
+  addTxn(acc, "WITHDRAWAL", amount);
+  return {ok:true};
+}
+
+function withdraw(acc, amount){
+  if(acc.type === "Savings"){
+    if(!(amount > 0)) return {ok:false, msg:"Withdrawal amount must be positive."};
+    if(acc.balance - amount < acc.minBalance) return {ok:false, msg:`Minimum balance of ${fmt(acc.minBalance)} required.`};
+    return baseWithdraw(acc, amount);
+  }
+  if(acc.type === "Current"){
+    if(!(amount > 0)) return {ok:false, msg:"Withdrawal amount must be positive."};
+    if(!acc.active) return {ok:false, msg:"Account is inactive."};
+    if(amount > acc.balance + acc.overdraft) return {ok:false, msg:`Exceeds overdraft limit of ${fmt(acc.overdraft)}.`};
+    acc.balance -= amount;
+    addTxn(acc, "WITHDRAWAL", amount);
+    return {ok:true};
+  }
+  return baseWithdraw(acc, amount);
+}
+
+function calcInterest(acc){
+  if(acc.type === "Savings") return acc.balance * acc.rate;
+  return 0;
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+let loginAttempts = 0;
+function attemptLogin(){
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  if(u === "admin" && p === "admin123"){
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').classList.add('active');
+    renderAll();
+    return;
+  }
+  loginAttempts++;
+  const card = document.getElementById('passbook-card');
+  card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+  if(loginAttempts >= 3){
+    errEl.textContent = "Too many failed attempts. Access locked — reload the page to try again.";
+    document.querySelectorAll('#login-screen input, #login-screen button').forEach(el => el.disabled = true);
+  } else {
+    errEl.textContent = `Invalid credentials. Attempts remaining: ${3 - loginAttempts}`;
+  }
+}
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key === 'Enter') attemptLogin(); });
+
+function logout(){
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+/* =========================================================
+   TABS
+   ========================================================= */
+document.getElementById('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['dashboard','customers','accounts','giving','reports'].forEach(t=>{
+    document.getElementById('view-'+t).style.display = (t === btn.dataset.tab) ? 'block' : 'none';
+  });
+  renderAll();
+});
+
+/* =========================================================
+   STAMP FEEDBACK
+   ========================================================= */
+function stamp(text, ok=true){
+  const layer = document.getElementById('stamp-layer');
+  const el = document.createElement('div');
+  el.className = 'stamp ' + (ok ? 'ok' : '');
+  el.textContent = text;
+  layer.appendChild(el);
+  requestAnimationFrame(()=> el.classList.add('show'));
+  setTimeout(()=> el.remove(), 950);
+}
+
+/* =========================================================
+   MODALS
+   ========================================================= */
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.getElementById('modal-body').innerHTML = '';
+}
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if(e.target.id === 'modal-overlay') closeModal();
+});
+
+function accountOptionList(selectId, includeInactive=true){
+  const opts = bank.accounts
+    .filter(a => includeInactive || a.active)
+    .map(a => `<option value="${a.number}">#${a.number} — ${a.holderName} (${a.type}, ${fmt(a.balance)})</option>`)
+    .join('');
+  return opts || '<option value="">No accounts yet</option>';
+}
+function customerOptionList(){
+  const opts = bank.customers.map(c => `<option value="${c.id}">#${c.id} — ${c.name}</option>`).join('');
+  return opts || '<option value="">No customers yet</option>';
+}
+
+function openModal(kind, payload){
+  const body = document.getElementById('modal-body');
+  document.getElementById('modal-overlay').classList.add('active');
+
+  if(kind === 'addCustomer'){
+    body.innerHTML = `
+      <h3>Add Customer</h3>
+      <div class="modal-sub">Every account must belong to a customer on file.</div>
+      <div class="field"><label>Full Name</label><input id="f-name" type="text"></div>
+      <div class="field"><label>Address</label><input id="f-address" type="text"></div>
+      <div class="field"><label>Phone</label><input id="f-phone" type="text"></div>
+      <div class="field"><label>Email</label><input id="f-email" type="email"></div>
+      <div class="error-text" id="modal-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddCustomer()">Save Customer</button>
+      </div>`;
+  }
+
+  else if(kind === 'createAccount'){
+    body.innerHTML = `
+      <h3>Create Account</h3>
+      <div class="modal-sub">Choose the customer and account type.</div>
+      <div class="field"><label>Customer</label><select id="f-customer">${customerOptionList()}</select></div>
+      <div class="radio-row">
+        <div class="radio-card selected" data-type="Savings" onclick="pickAccType(this)">Savings</div>
+        <div class="radio-card" data-type="Current" onclick="pickAccType(this)">Current</div>
+      </div>
+      <div class="field"><label>Initial Balance ($)</label><input id="f-balance" type="number" min="0" step="0.01"></div>
+      <div id="type-fields"></div>
+      <div class="error-text" id="modal-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateAccount()">Create</button>
+      </div>`;
+    renderAccTypeFields('Savings');
+  }
+
+  else if(kind === 'deposit' || kind === 'withdraw'){
+    const acc = payload;
+    const label = kind === 'deposit' ? 'Deposit' : 'Withdraw';
+    body.innerHTML = `
+      <h3>${label} — Account #${acc.number}</h3>
+      <div class="modal-sub">${acc.holderName} · Current balance ${fmt(acc.balance)}</div>
+      <div class="field"><label>Amount ($)</label><input id="f-amount" type="number" min="0" step="0.01"></div>
+      <div class="error-text" id="modal-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submit${label}(${acc.number})">${label}</button>
+      </div>`;
+  }
+
+  else if(kind === 'transfer'){
+    body.innerHTML = `
+      <h3>Transfer Money</h3>
+      <div class="modal-sub">Move funds between two accounts on the ledger.</div>
+      <div class="field"><label>From Account</label><select id="f-from">${accountOptionList()}</select></div>
+      <div class="field"><label>To Account</label><select id="f-to">${accountOptionList()}</select></div>
+      <div class="field"><label>Amount ($)</label><input id="f-amount" type="number" min="0" step="0.01"></div>
+      <div class="error-text" id="modal-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitTransfer()">Transfer</button>
+      </div>`;
+  }
+
+  else if(kind === 'customerDetail'){
+    const c = payload;
+    const accs = bank.accounts.filter(a => c.accountNumbers.includes(a.number));
+    body.innerHTML = `
+      <h3>${c.name}</h3>
+      <div class="modal-sub">Customer #${c.id}</div>
+      <div class="li-main sub" style="line-height:1.9;">
+        Address: ${c.address || '—'}<br>
+        Phone: ${c.phone || '—'}<br>
+        Email: ${c.email || '—'}
+      </div>
+      <h4 class="section-sub" style="margin-top:18px;">Linked Accounts</h4>
+      ${accs.length ? accs.map(a=>`<div class="txn"><span>#${a.number} · ${a.type}</span><span>${fmt(a.balance)}</span></div>`).join('') : '<div class="empty">No accounts yet.</div>'}
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      </div>`;
+  }
+
+  else if(kind === 'transactions'){
+    const acc = payload;
+    body.innerHTML = `
+      <h3>Transactions — #${acc.number}</h3>
+      <div class="modal-sub">${acc.holderName}</div>
+      ${acc.transactions.length ? acc.transactions.slice().reverse().map(t=>`
+        <div class="txn">
+          <span>${t.type}<br><span style="opacity:.6">${t.when}</span></span>
+          <span class="amt ${t.type==='DEPOSIT'?'dep':'wd'}">${t.type==='DEPOSIT'?'+':'-'}${fmt(t.amount)}</span>
+        </div>`).join('') : '<div class="empty">No transactions recorded yet.</div>'}
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      </div>`;
+  }
+}
+
+function pickAccType(el){
+  document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  renderAccTypeFields(el.dataset.type);
+}
+function renderAccTypeFields(type){
+  const el = document.getElementById('type-fields');
+  if(type === 'Savings'){
+    el.innerHTML = `
+      <div class="grid2">
+        <div class="field"><label>Interest Rate (e.g. 0.04 = 4%)</label><input id="f-rate" type="number" min="0" step="0.001" value="0.04"></div>
+        <div class="field"><label>Minimum Balance ($)</label><input id="f-minbal" type="number" min="0" step="0.01" value="500"></div>
+      </div>`;
+  } else {
+    el.innerHTML = `<div class="field"><label>Overdraft Limit ($)</label><input id="f-overdraft" type="number" min="0" step="0.01" value="5000"></div>`;
+  }
+}
+
+/* =========================================================
+   FORM SUBMISSIONS
+   ========================================================= */
+function submitAddCustomer(){
+  const name = document.getElementById('f-name').value.trim();
+  const address = document.getElementById('f-address').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const err = document.getElementById('modal-error');
+  if(!name){ err.textContent = "Name is required."; return; }
+  bank.lastCustomerId += 1;
+  bank.customers.push({ id: bank.lastCustomerId, name, address, phone, email, accountNumbers: [], active:true });
+  closeModal();
+  stamp("Customer Added");
+  renderAll();
+}
+
+function submitCreateAccount(){
+  const custId = parseInt(document.getElementById('f-customer').value, 10);
+  const balance = parseFloat(document.getElementById('f-balance').value);
+  const type = document.querySelector('.radio-card.selected').dataset.type;
+  const err = document.getElementById('modal-error');
+  const customer = findCustomer(custId);
+  if(!customer){ err.textContent = "Select a customer."; return; }
+  if(!(balance >= 0)){ err.textContent = "Initial balance cannot be negative."; return; }
+
+  let acc;
+  if(type === 'Savings'){
+    const rate = parseFloat(document.getElementById('f-rate').value);
+    const minBalance = parseFloat(document.getElementById('f-minbal').value);
+    if(!(rate >= 0) || !(minBalance >= 0)){ err.textContent = "Interest rate and minimum balance cannot be negative."; return; }
+    bank.lastAccountNumber += 1;
+    acc = { number: bank.lastAccountNumber, holderName: customer.name, type:'Savings', balance, active:true, transactions:[], rate, minBalance };
+  } else {
+    const overdraft = parseFloat(document.getElementById('f-overdraft').value);
+    if(!(overdraft >= 0)){ err.textContent = "Overdraft limit cannot be negative."; return; }
+    bank.lastAccountNumber += 1;
+    acc = { number: bank.lastAccountNumber, holderName: customer.name, type:'Current', balance, active:true, transactions:[], overdraft };
+  }
+  bank.accounts.push(acc);
+  customer.accountNumbers.push(acc.number);
+  closeModal();
+  stamp("Account Opened");
+  renderAll();
+}
+
+function submitDeposit(accNum){
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const err = document.getElementById('modal-error');
+  const acc = findAccount(accNum);
+  const res = deposit(acc, amount);
+  if(!res.ok){ err.textContent = res.msg; return; }
+  closeModal();
+  stamp("Deposited");
+  renderAll();
+}
+
+function submitWithdraw(accNum){
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const err = document.getElementById('modal-error');
+  const acc = findAccount(accNum);
+  const res = withdraw(acc, amount);
+  if(!res.ok){ err.textContent = res.msg; return; }
+  closeModal();
+  stamp("Withdrawn");
+  renderAll();
+}
+
+function submitTransfer(){
+  const fromNum = parseInt(document.getElementById('f-from').value, 10);
+  const toNum = parseInt(document.getElementById('f-to').value, 10);
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const err = document.getElementById('modal-error');
+  if(fromNum === toNum){ err.textContent = "Source and destination accounts must be different."; return; }
+  const from = findAccount(fromNum), to = findAccount(toNum);
+  if(!from || !to){ err.textContent = "One or both accounts not found."; return; }
+  const wd = withdraw(from, amount);
+  if(!wd.ok){ err.textContent = wd.msg; return; }
+  deposit(to, amount);
+  closeModal();
+  stamp("Transferred");
+  renderAll();
+}
+
+function applyInterestFor(accNum){
+  const acc = findAccount(accNum);
+  const interest = calcInterest(acc);
+  if(!(interest > 0)){ stamp("No Interest Due", false); return; }
+  deposit(acc, interest);
+  stamp("Interest Applied");
+  renderAll();
+}
+
+function toggleStatusFor(accNum){
+  const acc = findAccount(accNum);
+  acc.active = !acc.active;
+  stamp(acc.active ? "Activated" : "Deactivated", acc.active);
+  renderAll();
+}
+
+/* ---- Donations & Shopping ---- */
+function renderDonationFields(){
+  const type = document.getElementById('donation-type').value;
+  const el = document.getElementById('donation-fields');
+  if(type === 'zakat'){
+    const num = parseInt(document.getElementById('giving-account-select').value, 10);
+    const acc = findAccount(num);
+    const amt = acc ? acc.balance * 0.025 : 0;
+    el.innerHTML = `<div class="li-main sub" style="font-family:var(--font-mono);margin-bottom:10px;">Calculated Zakat: ${fmt(amt)}</div>`;
+  } else if(type === 'sadqa'){
+    el.innerHTML = `<div class="field"><label>Sadqa Amount ($)</label><input id="don-amount" type="number" min="0" step="0.01"></div>`;
+  } else {
+    el.innerHTML = `<div class="grid2">
+      <div class="field"><label>Number of People</label><input id="don-people" type="number" min="0" step="1"></div>
+      <div class="field"><label>Per Person ($)</label><input id="don-per" type="number" min="0" step="0.01"></div>
+    </div>`;
+  }
+}
+
+function submitDonation(){
+  const err = document.getElementById('donation-error');
+  err.textContent = '';
+  const accNum = parseInt(document.getElementById('giving-account-select').value, 10);
+  const acc = findAccount(accNum);
+  if(!acc){ err.textContent = "Select an account first."; return; }
+  const type = document.getElementById('donation-type').value;
+  let amount = 0;
+  if(type === 'zakat'){
+    amount = acc.balance * 0.025;
+  } else if(type === 'sadqa'){
+    amount = parseFloat(document.getElementById('don-amount').value);
+  } else {
+    const people = parseInt(document.getElementById('don-people').value, 10);
+    const per = parseFloat(document.getElementById('don-per').value);
+    if(!(people >= 0)){ err.textContent = "Number of people cannot be negative."; return; }
+    amount = people * per;
+  }
+  if(!(amount > 0)){ err.textContent = "Donation amount must be positive."; return; }
+  const res = withdraw(acc, amount);
+  if(!res.ok){ err.textContent = res.msg; return; }
+  stamp("Donation Processed");
+  renderAll();
+}
+
+let selectedBrandIdx = 0;
+function renderBrandGrid(){
+  const grid = document.getElementById('brand-grid');
+  grid.innerHTML = SCHEMES.map((s,i) => `
+    <div class="brand-card ${i===selectedBrandIdx?'selected':''}" onclick="pickBrand(${i})">
+      <div class="name">${s.name}</div>
+      <div class="pct">${s.note ? 'B2G1' : (s.pct*100)+'%'}</div>
+    </div>`).join('');
+}
+function pickBrand(i){ selectedBrandIdx = i; renderBrandGrid(); renderShoppingPreview(); }
+function renderShoppingPreview(){
+  const amount = parseFloat(document.getElementById('shopping-amount').value);
+  const el = document.getElementById('shopping-preview');
+  if(!(amount > 0)){ el.textContent = ''; return; }
+  const scheme = SCHEMES[selectedBrandIdx];
+  const discounted = amount * (1 - scheme.pct);
+  el.textContent = `${scheme.name} · Discount ${(scheme.pct*100)}% · Amount to pay ${fmt(discounted)}`;
+}
+
+function submitShopping(){
+  const err = document.getElementById('shopping-error');
+  err.textContent = '';
+  const accNum = parseInt(document.getElementById('giving-account-select').value, 10);
+  const acc = findAccount(accNum);
+  if(!acc){ err.textContent = "Select an account first."; return; }
+  const amount = parseFloat(document.getElementById('shopping-amount').value);
+  if(!(amount > 0)){ err.textContent = "Shopping amount must be positive."; return; }
+  const scheme = SCHEMES[selectedBrandIdx];
+  const discounted = amount * (1 - scheme.pct);
+  const res = withdraw(acc, discounted);
+  if(!res.ok){ err.textContent = res.msg; return; }
+  stamp("Purchase Complete");
+  renderAll();
+}
+
+function renderGivingBalance(){
+  const accNum = parseInt(document.getElementById('giving-account-select').value, 10);
+  const acc = findAccount(accNum);
+  document.getElementById('giving-balance-line').textContent = acc ? `Balance: ${fmt(acc.balance)} · ${acc.type}` : '';
+  renderDonationFields();
+}
+
+/* =========================================================
+   MAIN RENDER
+   ========================================================= */
+function renderAll(){
+  // dashboard
+  document.getElementById('stat-customers').textContent = bank.customers.length;
+  document.getElementById('stat-accounts').textContent = bank.accounts.length;
+  const totalBalance = bank.accounts.reduce((s,a)=>s+a.balance,0);
+  document.getElementById('stat-balance').textContent = fmt(totalBalance);
+
+  const allTxns = [];
+  bank.accounts.forEach(a => a.transactions.forEach(t => allTxns.push({...t, acc:a.number})));
+  const recentEl = document.getElementById('recent-activity');
+  if(allTxns.length === 0){
+    recentEl.innerHTML = '<div class="empty">No transactions yet — deposits and withdrawals will appear here.</div>';
+  } else {
+    recentEl.innerHTML = allTxns.slice(-8).reverse().map(t => `
+      <div class="txn"><span>${t.type} — Acct #${t.acc}<br><span style="opacity:.6">${t.when}</span></span>
+      <span class="amt ${t.type==='DEPOSIT'?'dep':'wd'}">${t.type==='DEPOSIT'?'+':'-'}${fmt(t.amount)}</span></div>`).join('');
+  }
+
+  // customers
+  const custEl = document.getElementById('customers-list');
+  custEl.innerHTML = bank.customers.length ? bank.customers.map(c => `
+    <div class="list-item">
+      <div class="li-main">
+        <div class="title">#${c.id} — ${c.name}</div>
+        <div class="sub">${c.accountNumbers.length} account(s) · ${c.email || 'no email on file'}</div>
+      </div>
+      <div class="row">
+        <span class="badge active">Active</span>
+        <button class="btn btn-outline btn-sm" onclick='openModal("customerDetail", ${JSON.stringify(c)})'>View</button>
+      </div>
+    </div>`).join('') : `<div class="empty"><div class="big">No customers yet</div>Add your first customer to start opening accounts.</div>`;
+
+  // accounts
+  const accEl = document.getElementById('accounts-list');
+  accEl.innerHTML = bank.accounts.length ? bank.accounts.map(a => `
+    <div class="list-item">
+      <div class="li-main">
+        <div class="title">#${a.number} — ${a.holderName} <span class="badge type">${a.type}</span></div>
+        <div class="sub">${fmt(a.balance)} ${a.type==='Savings' ? '· rate '+(a.rate*100)+'% · min '+fmt(a.minBalance) : '· overdraft '+fmt(a.overdraft)}</div>
+      </div>
+      <div class="row" style="flex-wrap:wrap;justify-content:flex-end;max-width:420px;">
+        <span class="badge ${a.active?'active':'inactive'}">${a.active?'Active':'Inactive'}</span>
+        <button class="btn btn-outline btn-sm" onclick='openModal("deposit", ${JSON.stringify(a)})'>Deposit</button>
+        <button class="btn btn-outline btn-sm" onclick='openModal("withdraw", ${JSON.stringify(a)})'>Withdraw</button>
+        <button class="btn btn-outline btn-sm" onclick="applyInterestFor(${a.number})">Interest</button>
+        <button class="btn btn-outline btn-sm" onclick='openModal("transactions", ${JSON.stringify(a)})'>History</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleStatusFor(${a.number})">${a.active?'Deactivate':'Activate'}</button>
+      </div>
+    </div>`).join('') : `<div class="empty"><div class="big">No accounts yet</div>Create one from an existing customer.</div>`;
+
+  // giving tab
+  const givingSelect = document.getElementById('giving-account-select');
+  const prevVal = givingSelect.value;
+  givingSelect.innerHTML = accountOptionList();
+  if(prevVal) givingSelect.value = prevVal;
+  renderGivingBalance();
+  renderBrandGrid();
+  renderShoppingPreview();
+
+  // reports
+  const reportEl = document.getElementById('report-card');
+  reportEl.innerHTML = `
+    <h4 class="section-sub">${bank.name} — Standing Report</h4>
+    <div class="txn"><span>Total Customers</span><span>${bank.customers.length}</span></div>
+    <div class="txn"><span>Total Accounts</span><span>${bank.accounts.length}</span></div>
+    <div class="txn"><span>Total Bank Balance</span><span>${fmt(totalBalance)}</span></div>
+    <h4 class="section-sub" style="margin-top:22px;">All Accounts</h4>
+    ${bank.accounts.length ? bank.accounts.map(a=>`<div class="txn"><span>#${a.number} · ${a.holderName} · ${a.type}</span><span>${fmt(a.balance)}</span></div>`).join('') : '<div class="empty">No accounts yet.</div>'}
+  `;
+}
+
+renderAll();
+</script>
+</body>
+</html>
